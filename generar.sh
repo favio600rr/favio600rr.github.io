@@ -872,7 +872,7 @@ ${features_html}
     <section id="galeria" class="section gallery">
         <div class="container">
             <h2 class="section-title">Galería</h2>
-            <p class="section-desc">Cada detalle de nuestro parlante premium</p>
+            <p class="section-desc">Cada detalle de nuestro parlante bluetooth TAXI</p>
             <div class="gallery-main">
                 <img id="galleryMain" src="assets/img/${first_img}" alt="${PRODUCT_NAME}">
             </div>
