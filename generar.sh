@@ -17,8 +17,9 @@ set -Eeuo pipefail
 SITE_TITLE="Favio600RR Shop"
 SITE_DESCRIPTION="Parlantes Bluetooth para motos. Potencia, estilo y sonido sobre ruedas."
 PRODUCT_NAME="Parlante Bluetooth TAXI"
-PRODUCT_PRICE="180"
-PRODUCT_STOCK="98"
+PRODUCT_PRICE="203.40"
+PROMO_PRICE="180"                      # vacío = sin promo, ej: "150" = precio promocional
+PRODUCT_STOCK="77"                     # stock total (suma de variantes)
 WHATSAPP_NUMBER="591700000000"
 SELLER_NAME="Favio600RR"
 PRIMARY_COLOR="#ff6b35"
@@ -31,16 +32,20 @@ HERO_FEATURES=(
     "🔋 Cargador vía USB"
 )
 
+# Stock individual por variante
+STOCK_MANILLAR="47"
+STOCK_ESPEJO="35"
+
 PRODUCT_VARIANTS=(
-    "Abrazadera|abrazadera"
-    "Sujetador|sujetador"
+    "Parlante para Manillar|manillar"
+    "Parlante para Espejo|espejo"
 )
 
 # Imágenes destacadas del producto — nombre de archivo en assets/img/
-FEATURED_PRODUCT_1=""
-FEATURED_PRODUCT_1_LABEL="Parlante con abrazadera"
-FEATURED_PRODUCT_2=""
-FEATURED_PRODUCT_2_LABEL="Parlante con sujetador"
+FEATURED_PRODUCT_1="foto4.png"
+FEATURED_PRODUCT_1_LABEL="Parlante para Manillar"
+FEATURED_PRODUCT_2="foto2.png"
+FEATURED_PRODUCT_2_LABEL="Parlante para Espejo"
 FEATURED_ROTATION_INTERVAL="5000"
 
 # Redes sociales — deja vacío para ocultar
@@ -61,6 +66,11 @@ GITHUB_URL=""
 # =============================================================================
 #  NO EDITES DEBAJO DE ESTA LÍNEA
 # =============================================================================
+
+# Resolver stock por variante (fallback a PRODUCT_STOCK si están vacíos)
+: "${STOCK_MANILLAR:=$PRODUCT_STOCK}"
+: "${STOCK_ESPEJO:=$PRODUCT_STOCK}"
+TOTAL_STOCK=$((STOCK_MANILLAR + STOCK_ESPEJO))
 
 readonly OUTPUT_DIR="public"
 readonly SCRIPT_VERSION="3.0.0"
@@ -290,6 +300,329 @@ detect_assets() {
 }
 
 # =============================================================================
+#  DETECTAR DISTRO LINUX
+# =============================================================================
+detect_distro() {
+    local distro=""
+    if [ -f /etc/os-release ]; then
+        distro=$(grep -oP '^ID=\K.*' /etc/os-release 2>/dev/null | tr -d '"' | tr '[:upper:]' '[:lower:]') || true
+    fi
+    if [ -z "$distro" ] && command -v lsb_release &>/dev/null; then
+        distro=$(lsb_release -si 2>/dev/null | tr '[:upper:]' '[:lower:]') || true
+    fi
+    if [ -z "$distro" ] && [ -f /etc/debian_version ]; then
+        distro="debian"
+    elif [ -z "$distro" ] && [ -f /etc/arch-release ]; then
+        distro="arch"
+    elif [ -z "$distro" ] && [ -f /etc/fedora-release ]; then
+        distro="fedora"
+    fi
+    echo "${distro:-unknown}"
+}
+
+# =============================================================================
+#  INSTALAR HERRAMIENTAS DE COMPRESIÓN
+# =============================================================================
+install_compression_tools() {
+    local distro
+    distro=$(detect_distro)
+    log_info "Distro detectada: ${distro}"
+
+    if ! command -v sudo &>/dev/null; then
+        log_warn "sudo no disponible. No se pueden instalar herramientas automáticamente."
+        return 1
+    fi
+
+    case "$distro" in
+        ubuntu|debian|linuxmint|kali|pop|elementary|neon|zorin|mx|deepin)
+            log_info "Instalando herramientas vía apt..."
+            sudo apt-get update -qq 2>/dev/null || true
+            sudo apt-get install -y -qq imagemagick webp jpegoptim optipng pngquant ffmpeg 2>/dev/null || {
+                log_warn "Algunos paquetes no estan disponibles. Continuando con los instalados."
+            }
+            log_info "Herramientas instaladas correctamente"
+            ;;
+        arch|manjaro|endeavouros|artix|arcolinux)
+            log_info "Instalando herramientas vía pacman..."
+            sudo pacman -S --noconfirm --needed imagemagick libwebp jpegoptim optipng pngquant ffmpeg 2>/dev/null || {
+                log_warn "Algunos paquetes no estan disponibles. Continuando con los instalados."
+            }
+            log_info "Herramientas instaladas correctamente"
+            ;;
+        fedora|rhel|centos|rocky|alma)
+            log_info "Instalando herramientas vía dnf..."
+            sudo dnf install -y ImageMagick libwebp jpegoptim optipng pngquant ffmpeg 2>/dev/null || {
+                log_warn "Algunos paquetes no estan disponibles. Continuando con los instalados."
+            }
+            log_info "Herramientas instaladas correctamente"
+            ;;
+        opensuse*|suse)
+            log_info "Instalando herramientas vía zypper..."
+            sudo zypper --non-interactive install imagemagick libwebp jpegoptim optipng pngquant ffmpeg 2>/dev/null || {
+                log_warn "Algunos paquetes no estan disponibles. Continuando con los instalados."
+            }
+            log_info "Herramientas instaladas correctamente"
+            ;;
+        alpine)
+            log_info "Instalando herramientas vía apk..."
+            sudo apk add imagemagick libwebp jpegoptim optipng pngquant ffmpeg 2>/dev/null || {
+                log_warn "Algunos paquetes no estan disponibles. Continuando con los instalados."
+            }
+            log_info "Herramientas instaladas correctamente"
+            ;;
+        void)
+            log_info "Instalando herramientas vía xbps..."
+            sudo xbps-install -S imagemagick libwebp jpegoptim optipng pngquant ffmpeg 2>/dev/null || {
+                log_warn "Algunos paquetes no estan disponibles. Continuando con los instalados."
+            }
+            log_info "Herramientas instaladas correctamente"
+            ;;
+        *)
+            log_warn "Distro '${distro}' no reconocida. Instala manualmente las herramientas."
+            log_warn "Paquetes necesarios: imagemagick, webp, jpegoptim, optipng, pngquant, ffmpeg"
+            return 1
+            ;;
+    esac
+}
+
+# =============================================================================
+#  FORMATO LEGIBLE DE TAMAÑO
+# =============================================================================
+format_size() {
+    local bytes=$1
+    if [ "$bytes" -ge 1048576 ]; then
+        local mb=$((bytes * 100 / 1048576))
+        echo "$((mb / 100)),$((mb % 100 < 10 ? 0 : 0))$((mb % 100)) MB"
+    elif [ "$bytes" -ge 1024 ]; then
+        local kb=$((bytes * 10 / 1024))
+        echo "$((kb / 10)),$((kb % 10)) KB"
+    else
+        echo "${bytes} B"
+    fi
+}
+
+# =============================================================================
+#  OPTIMIZAR IMÁGENES
+# =============================================================================
+optimize_images() {
+    log_step "Optimizando imágenes"
+
+    local img_dir="${OUTPUT_DIR}/assets/img"
+    local has_any=false
+
+    # ─── Verificar herramientas disponibles ───
+    for cmd in mogrify convert cwebp jpegoptim optipng; do
+        if command -v "$cmd" &>/dev/null; then
+            has_any=true
+            break
+        fi
+    done
+
+    if ! $has_any; then
+        log_warn "No hay herramientas de compresión disponibles. Intentando instalar..."
+        install_compression_tools || true
+    fi
+
+    # ─── Verificar nuevamente después de instalación ───
+    has_any=false
+    for cmd in mogrify convert cwebp jpegoptim optipng; do
+        if command -v "$cmd" &>/dev/null; then
+            has_any=true
+            break
+        fi
+    done
+
+    if ! $has_any; then
+        log_warn "No hay herramientas de compresión disponibles. Continuando sin optimización."
+        log_warn "Instala manualmente: ImageMagick, webp, jpegoptim, optipng"
+        return
+    fi
+
+    log_info "Herramientas disponibles:"
+    command -v mogrify &>/dev/null && log_info "  - mogrify (ImageMagick)"
+    command -v convert &>/dev/null && log_info "  - convert (ImageMagick)"
+    command -v cwebp &>/dev/null && log_info "  - cwebp (WebP)"
+    command -v jpegoptim &>/dev/null && log_info "  - jpegoptim"
+    command -v optipng &>/dev/null && log_info "  - optipng"
+    command -v pngquant &>/dev/null && log_info "  - pngquant"
+
+    # ─── Calcular tamaño total antes ───
+    local total_before=0 total_after=0 f ext size
+
+    for f in "$img_dir"/*; do
+        [ -f "$f" ] || continue
+        size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+        total_before=$((total_before + size))
+    done
+
+    if [ "$total_before" -eq 0 ]; then
+        log_warn "No hay imágenes para optimizar en ${img_dir}"
+        return
+    fi
+
+    # ─── Aplicar compresión principal con mogrify ───
+    local optimized=0 skipped=0
+
+    if command -v mogrify &>/dev/null; then
+        log_info "Comprimiendo con ImageMagick (mogrify) calidad ~85%..."
+        for f in "$img_dir"/*; do
+            [ -f "$f" ] || continue
+            ext="${f##*.}"
+            ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+            case "$ext" in
+                png|jpg|jpeg|webp)
+                    if mogrify -strip -quality 85 "$f" 2>/dev/null; then
+                        optimized=$((optimized + 1))
+                    else
+                        skipped=$((skipped + 1))
+                    fi
+                    ;;
+            esac
+        done
+    fi
+
+    # ─── Optimización adicional especializada ───
+    if command -v jpegoptim &>/dev/null; then
+        for f in "$img_dir"/*; do
+            [ -f "$f" ] || continue
+            ext="${f##*.}"
+            ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+            case "$ext" in
+                jpg|jpeg)
+                    jpegoptim --strip-all --max=85 "$f" 2>/dev/null || true
+                    ;;
+            esac
+        done
+    fi
+
+    if command -v pngquant &>/dev/null; then
+        for f in "$img_dir"/*; do
+            [ -f "$f" ] || continue
+            ext="${f##*.}"
+            ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+            case "$ext" in
+                png)
+                    pngquant --strip --quality 70-85 --speed 3 --force "$f" --out "$f" 2>/dev/null || true
+                    ;;
+            esac
+        done
+    fi
+
+    if command -v optipng &>/dev/null; then
+        for f in "$img_dir"/*; do
+            [ -f "$f" ] || continue
+            ext="${f##*.}"
+            ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+            case "$ext" in
+                png)
+                    optipng -o2 -strip all "$f" 2>/dev/null || true
+                    ;;
+            esac
+        done
+    fi
+
+    # ─── Calcular tamaño después ───
+    for f in "$img_dir"/*; do
+        [ -f "$f" ] || continue
+        size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+        total_after=$((total_after + size))
+    done
+
+    # ─── Mostrar resultados ───
+    local saved=$((total_before - total_after))
+    local pct=0
+    if [ "$total_before" -gt 0 ]; then
+        pct=$((saved * 100 / total_before))
+    fi
+
+    local before_fmt after_fmt saved_fmt
+    before_fmt=$(format_size "$total_before")
+    after_fmt=$(format_size "$total_after")
+    saved_fmt=$(format_size "${saved#-}")
+
+    if [ "$saved" -gt 0 ]; then
+        log_info "Optimización: ${before_fmt} → ${after_fmt} (ahorro ${saved_fmt}, ${pct}%)"
+    elif [ "$saved" -lt 0 ]; then
+        log_info "Optimización: ${before_fmt} → ${after_fmt} (incremento ${saved_fmt})"
+    else
+        log_info "Imágenes ya optimizadas (${before_fmt})"
+    fi
+
+    if [ "$skipped" -gt 0 ]; then
+        log_info "${optimized} optimizada(s), ${skipped} omitida(s)"
+    else
+        log_info "${optimized} imagen(es) procesada(s)"
+    fi
+}
+
+# =============================================================================
+#  CONVERTIR VIDEOS PARA COMPATIBILIDAD WEB (ffmpeg)
+# =============================================================================
+convert_videos() {
+    log_step "Convirtiendo videos para compatibilidad web"
+
+    local vid_dir="${OUTPUT_DIR}/assets/video"
+
+    if ! command -v ffmpeg &>/dev/null; then
+        log_warn "ffmpeg no disponible. Intentando instalar..."
+        install_compression_tools || true
+    fi
+
+    if ! command -v ffmpeg &>/dev/null; then
+        log_warn "ffmpeg no disponible. Los videos se usaran sin convertir."
+        return
+    fi
+
+    local converted=0 skipped=0
+    local f ext basename_name tmp_output
+
+    for f in "$vid_dir"/*; do
+        [ -f "$f" ] || continue
+        ext="${f##*.}"
+        ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+
+        case "$ext" in
+            mp4|webm|mov|avi|mkv|flv|m4v)
+                basename_name="${f%.*}"
+                tmp_output="${basename_name}.tmp.mp4"
+
+                log_info "  Convirtiendo $(basename "$f")..."
+
+                if ffmpeg -i "$f" \
+                    -c:v libx264 \
+                    -pix_fmt yuv420p \
+                    -c:a aac \
+                    -movflags +faststart \
+                    -y "$tmp_output" 2>/dev/null; then
+                    mv "$tmp_output" "${basename_name}.mp4"
+                    if [ "$ext" != "mp4" ]; then
+                        rm -f "$f"
+                    fi
+                    converted=$((converted + 1))
+                else
+                    log_warn "  Error al convertir $(basename "$f"). Usando original."
+                    rm -f "$tmp_output"
+                    skipped=$((skipped + 1))
+                fi
+                ;;
+        esac
+    done
+
+    # Re-poblar DETECTED_VIDEOS con los nombres actualizados
+    DETECTED_VIDEOS=()
+    while IFS= read -r -d '' f; do
+        DETECTED_VIDEOS+=("$f")
+    done < <(find "$vid_dir" -maxdepth 1 -type f -print0 2>/dev/null | sort -z)
+
+    if [ "$converted" -gt 0 ]; then
+        log_info "${converted} video(s) convertido(s) a MP4 compatible"
+    fi
+    if [ "$skipped" -gt 0 ]; then
+        log_info "${skipped} video(s) omitido(s) por error"
+    fi
+}
+
+# =============================================================================
 #  GENERAR INDEX.HTML
 # =============================================================================
 generate_index_html() {
@@ -347,16 +680,24 @@ generate_index_html() {
     local variants_html=""
     for variant in "${PRODUCT_VARIANTS[@]}"; do
         IFS='|' read -r label id <<< "$variant"
+        local stock_var="STOCK_$(echo "$id" | tr '[:lower:]' '[:upper:]')"
+        local max="${!stock_var}"
         [ -n "$variants_html" ] && variants_html+=$'\n'
         variants_html+="                        <div class=\"variant-item\">"
         variants_html+=$'\n'
-        variants_html+="                            <span class=\"variant-label\">${label}</span>"
+        variants_html+="                            <div class=\"variant-info\">"
+        variants_html+=$'\n'
+        variants_html+="                                <span class=\"variant-label\">${label}</span>"
+        variants_html+=$'\n'
+        variants_html+="                                <span class=\"variant-stock\"><span class=\"stock-dot\"></span> ${max} unid. disponibles</span>"
+        variants_html+=$'\n'
+        variants_html+="                            </div>"
         variants_html+=$'\n'
         variants_html+="                            <div class=\"quantity-selector\">"
         variants_html+=$'\n'
         variants_html+="                                <button class=\"qty-btn variant-minus\" data-id=\"${id}\" type=\"button\" aria-label=\"Reducir ${label}\">−</button>"
         variants_html+=$'\n'
-        variants_html+="                                <input type=\"number\" class=\"qty-input variant-qty\" data-id=\"${id}\" value=\"0\" min=\"0\" max=\"${PRODUCT_STOCK}\" aria-live=\"polite\">"
+        variants_html+="                                <input type=\"number\" class=\"qty-input variant-qty\" data-id=\"${id}\" value=\"0\" min=\"0\" max=\"${max}\" aria-live=\"polite\">"
         variants_html+=$'\n'
         variants_html+="                                <button class=\"qty-btn variant-plus\" data-id=\"${id}\" type=\"button\" aria-label=\"Aumentar ${label}\">+</button>"
         variants_html+=$'\n'
@@ -437,6 +778,27 @@ generate_index_html() {
         done
         featured_html+='                    </div>'$'\n'
         featured_html+='                </div>'
+    fi
+
+    # ─── Precio promocional ───
+    local price_html=""
+    if [ -n "$PROMO_PRICE" ]; then
+        price_html=$(cat <<PRICEEOF
+                    <div class="price-row">
+                        <div class="price-promo-wrap">
+                            <span class="promo-badge">🔥 OFERTA</span>
+                            <span class="price-old">Bs ${PRODUCT_PRICE}</span>
+                            <span class="price-promo">Bs ${PROMO_PRICE}</span>
+                        </div>
+                        <div class="promo-glow"></div>
+                    </div>
+PRICEEOF
+)
+    else
+        price_html=$(cat <<PRICEEOF
+                    <div class="product-price">Bs ${PRODUCT_PRICE}</div>
+PRICEEOF
+)
     fi
 
     # ─── Escribir HTML ───
@@ -542,10 +904,7 @@ ${featured_html}
                 </div>
                 <div class="product-info-col">
                     <h3 class="product-name">${PRODUCT_NAME}</h3>
-                    <div class="product-price">Bs ${PRODUCT_PRICE}</div>
-                    <div class="product-stock">
-                        <span class="stock-badge" id="stockBadge">✓ En stock (${PRODUCT_STOCK} unid.)</span>
-                    </div>
+                    ${price_html}
 
                     <div class="product-variants">
                         <label class="variants-label">Cantidad por variante</label>
@@ -997,7 +1356,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .video-wrapper video {
     width: 100%;
-    max-height: 75vh;
+    aspect-ratio: 16 / 9;
     object-fit: contain;
     display: block;
     background: #000;
@@ -1049,6 +1408,87 @@ button { font-family: inherit; cursor: pointer; }
     background: rgba(50, 220, 100, 0.12);
     color: #32dc64;
     border: 1px solid rgba(50, 220, 100, 0.2);
+}
+
+/* --- Precio promocional --- */
+.price-row {
+    position: relative;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+.price-promo-wrap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.08), rgba(255, 68, 68, 0.04));
+    border: 1px solid rgba(255, 107, 53, 0.15);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+}
+.price-old {
+    font-size: 1.3rem;
+    color: var(--text3);
+    text-decoration: line-through;
+    font-weight: 500;
+    order: 2;
+}
+.price-promo {
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -1px;
+    order: 3;
+}
+.promo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 16px;
+    background: linear-gradient(135deg, #ff6b35, #ff4444);
+    color: #fff;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    order: 1;
+    box-shadow: 0 2px 12px rgba(255, 68, 68, 0.3);
+}
+.promo-glow {
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255, 107, 53, 0.12), transparent 70%);
+    pointer-events: none;
+}
+
+/* --- Stock por variante --- */
+.variant-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.variant-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text2);
+    font-weight: 500;
+}
+.stock-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #32dc64;
+    box-shadow: 0 0 6px rgba(50, 220, 100, 0.5);
+    flex-shrink: 0;
 }
 
 /* --- Featured product showcase --- */
@@ -1349,6 +1789,9 @@ button { font-family: inherit; cursor: pointer; }
 
     .product-card { grid-template-columns: 1fr; gap: 32px; padding: 32px; }
     .product-price { font-size: 2.2rem; }
+    .price-promo { font-size: 2rem; }
+    .price-old { font-size: 1.1rem; }
+    .price-promo-wrap { padding: 14px 16px; }
 }
 
 /* ============== RESPONSIVE: MOBILE ============== */
@@ -1372,10 +1815,14 @@ button { font-family: inherit; cursor: pointer; }
     .product-card { padding: 20px; }
     .product-name { font-size: 1.4rem; }
     .product-price { font-size: 1.8rem; }
+    .price-promo { font-size: 1.6rem; }
+    .price-old { font-size: 0.95rem; }
+    .price-promo-wrap { padding: 12px 14px; gap: 10px; }
+    .promo-badge { font-size: 0.7rem; padding: 4px 12px; }
     .qty-btn { width: 40px; height: 40px; }
     .qty-input { width: 54px; height: 40px; font-size: 1rem; }
 
-    .video-wrapper video { max-height: 50vh; }
+    .video-wrapper video { aspect-ratio: 16 / 9; }
 
     .footer-social { gap: 8px; }
     .social-link { font-size: 0.85rem; padding: 6px 12px; }
@@ -1409,8 +1856,10 @@ generate_js() {
     local variants_json=""
     for variant in "${PRODUCT_VARIANTS[@]}"; do
         IFS='|' read -r label id <<< "$variant"
+        local stock_var="STOCK_$(echo "$id" | tr '[:lower:]' '[:upper:]')"
+        local max="${!stock_var}"
         if [ -n "$variants_json" ]; then variants_json+=","; fi
-        variants_json+="{ id: \"${id}\", label: \"${label}\", qty: 0 }"
+        variants_json+="{ id: \"${id}\", label: \"${label}\", qty: 0, max: ${max} }"
     done
 
     cat <<EOF > "${OUTPUT_DIR}/js/app.js"
@@ -1425,7 +1874,8 @@ generate_js() {
     var CONFIG = {
         productName:    "$PRODUCT_NAME",
         productPrice:   "$PRODUCT_PRICE",
-        productStock:   $PRODUCT_STOCK,
+        promoPrice:     "${PROMO_PRICE}",
+        productStock:   $TOTAL_STOCK,
         featuredInterval: ${FEATURED_ROTATION_INTERVAL:-5000},
         whatsappNumber: "$WHATSAPP_NUMBER",
         sellerName:     "$SELLER_NAME"
@@ -1502,10 +1952,18 @@ generate_js() {
                 var minus = document.querySelector(".variant-minus[data-id=\"" + id + "\"]");
                 var plus  = document.querySelector(".variant-plus[data-id=\"" + id + "\"]");
 
+                function getVariantMax() {
+                    for (var j = 0; j < VARIANTS.length; j++) {
+                        if (VARIANTS[j].id === id) return VARIANTS[j].max;
+                    }
+                    return CONFIG.productStock;
+                }
+
                 function syncVariant() {
                     var v = parseInt(input.value, 10);
                     if (isNaN(v) || v < 0) v = 0;
-                    if (v > CONFIG.productStock) v = CONFIG.productStock;
+                    var maxStock = getVariantMax();
+                    if (v > maxStock) v = maxStock;
                     input.value = v;
                     for (var j = 0; j < VARIANTS.length; j++) {
                         if (VARIANTS[j].id === id) {
@@ -1525,7 +1983,8 @@ generate_js() {
                 if (plus) {
                     plus.addEventListener("click", function () {
                         var v = parseInt(input.value, 10) || 0;
-                        if (v < CONFIG.productStock) { v++; input.value = v; syncVariant(); }
+                        var maxStock = getVariantMax();
+                        if (v < maxStock) { v++; input.value = v; syncVariant(); }
                     });
                 }
                 input.addEventListener("input", syncVariant);
@@ -1731,7 +2190,11 @@ generate_js() {
 
     /* --- Stock --- */
     function handleStock() {
-        if (CONFIG.productStock > 0) return;
+        var hasStock = false;
+        for (var i = 0; i < VARIANTS.length; i++) {
+            if (VARIANTS[i].max > 0) { hasStock = true; break; }
+        }
+        if (hasStock) return;
 
         var badge = document.getElementById("stockBadge");
         if (badge) {
@@ -1810,6 +2273,8 @@ main() {
     clean_previous_build
     create_directories
     detect_assets
+    optimize_images
+    convert_videos
     generate_index_html
     generate_css
     generate_js

@@ -388,7 +388,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .video-wrapper video {
     width: 100%;
-    max-height: 75vh;
+    aspect-ratio: 16 / 9;
     object-fit: contain;
     display: block;
     background: #000;
@@ -440,6 +440,87 @@ button { font-family: inherit; cursor: pointer; }
     background: rgba(50, 220, 100, 0.12);
     color: #32dc64;
     border: 1px solid rgba(50, 220, 100, 0.2);
+}
+
+/* --- Precio promocional --- */
+.price-row {
+    position: relative;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+.price-promo-wrap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.08), rgba(255, 68, 68, 0.04));
+    border: 1px solid rgba(255, 107, 53, 0.15);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+}
+.price-old {
+    font-size: 1.3rem;
+    color: var(--text3);
+    text-decoration: line-through;
+    font-weight: 500;
+    order: 2;
+}
+.price-promo {
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -1px;
+    order: 3;
+}
+.promo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 16px;
+    background: linear-gradient(135deg, #ff6b35, #ff4444);
+    color: #fff;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    order: 1;
+    box-shadow: 0 2px 12px rgba(255, 68, 68, 0.3);
+}
+.promo-glow {
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255, 107, 53, 0.12), transparent 70%);
+    pointer-events: none;
+}
+
+/* --- Stock por variante --- */
+.variant-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.variant-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text2);
+    font-weight: 500;
+}
+.stock-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #32dc64;
+    box-shadow: 0 0 6px rgba(50, 220, 100, 0.5);
+    flex-shrink: 0;
 }
 
 /* --- Featured product showcase --- */
@@ -740,6 +821,9 @@ button { font-family: inherit; cursor: pointer; }
 
     .product-card { grid-template-columns: 1fr; gap: 32px; padding: 32px; }
     .product-price { font-size: 2.2rem; }
+    .price-promo { font-size: 2rem; }
+    .price-old { font-size: 1.1rem; }
+    .price-promo-wrap { padding: 14px 16px; }
 }
 
 /* ============== RESPONSIVE: MOBILE ============== */
@@ -763,10 +847,14 @@ button { font-family: inherit; cursor: pointer; }
     .product-card { padding: 20px; }
     .product-name { font-size: 1.4rem; }
     .product-price { font-size: 1.8rem; }
+    .price-promo { font-size: 1.6rem; }
+    .price-old { font-size: 0.95rem; }
+    .price-promo-wrap { padding: 12px 14px; gap: 10px; }
+    .promo-badge { font-size: 0.7rem; padding: 4px 12px; }
     .qty-btn { width: 40px; height: 40px; }
     .qty-input { width: 54px; height: 40px; font-size: 1rem; }
 
-    .video-wrapper video { max-height: 50vh; }
+    .video-wrapper video { aspect-ratio: 16 / 9; }
 
     .footer-social { gap: 8px; }
     .social-link { font-size: 0.85rem; padding: 6px 12px; }

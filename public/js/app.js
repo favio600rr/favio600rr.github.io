@@ -8,16 +8,17 @@
 
     var CONFIG = {
         productName:    "Parlante Bluetooth TAXI",
-        productPrice:   "180",
-        productStock:   98,
+        productPrice:   "203.40",
+        promoPrice:     "180",
+        productStock:   82,
         featuredInterval: 5000,
-        whatsappNumber: "59178037726",
+        whatsappNumber: "591700000000",
         sellerName:     "Favio600RR"
     };
 
-    var GALLERY_IMAGES = ["assets/img/foto1.png","assets/img/foto2.png","assets/img/foto3.png","assets/img/foto4.png","assets/img/foto5.png","assets/img/foto6.png"];
+    var GALLERY_IMAGES = ["assets/img/foto1.png","assets/img/foto2.png","assets/img/foto3.png","assets/img/foto4.png","assets/img/foto5.png","assets/img/foto6.png","assets/img/foto7.png","assets/img/foto8.png"];
     var VIDEOS         = [{ src: "assets/video/video1.mp4" }];
-    var VARIANTS       = [{ id: "abrazadera", label: "Abrazadera", qty: 0 },{ id: "sujetador", label: "Sujetador", qty: 0 }];
+    var VARIANTS       = [{ id: "manillar", label: "Parlante para Manillar", qty: 0, max: 47 },{ id: "espejo", label: "Parlante para Espejo", qty: 0, max: 35 }];
 
     var currentIndex = 0;
 
@@ -86,10 +87,18 @@
                 var minus = document.querySelector(".variant-minus[data-id=\"" + id + "\"]");
                 var plus  = document.querySelector(".variant-plus[data-id=\"" + id + "\"]");
 
+                function getVariantMax() {
+                    for (var j = 0; j < VARIANTS.length; j++) {
+                        if (VARIANTS[j].id === id) return VARIANTS[j].max;
+                    }
+                    return CONFIG.productStock;
+                }
+
                 function syncVariant() {
                     var v = parseInt(input.value, 10);
                     if (isNaN(v) || v < 0) v = 0;
-                    if (v > CONFIG.productStock) v = CONFIG.productStock;
+                    var maxStock = getVariantMax();
+                    if (v > maxStock) v = maxStock;
                     input.value = v;
                     for (var j = 0; j < VARIANTS.length; j++) {
                         if (VARIANTS[j].id === id) {
@@ -109,7 +118,8 @@
                 if (plus) {
                     plus.addEventListener("click", function () {
                         var v = parseInt(input.value, 10) || 0;
-                        if (v < CONFIG.productStock) { v++; input.value = v; syncVariant(); }
+                        var maxStock = getVariantMax();
+                        if (v < maxStock) { v++; input.value = v; syncVariant(); }
                     });
                 }
                 input.addEventListener("input", syncVariant);
@@ -315,7 +325,11 @@
 
     /* --- Stock --- */
     function handleStock() {
-        if (CONFIG.productStock > 0) return;
+        var hasStock = false;
+        for (var i = 0; i < VARIANTS.length; i++) {
+            if (VARIANTS[i].max > 0) { hasStock = true; break; }
+        }
+        if (hasStock) return;
 
         var badge = document.getElementById("stockBadge");
         if (badge) {
