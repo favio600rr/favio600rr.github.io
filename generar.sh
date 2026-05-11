@@ -20,7 +20,7 @@ PRODUCT_NAME="Parlante Bluetooth TAXI"
 PRODUCT_PRICE="203.40"
 PROMO_PRICE="180"                      # vacío = sin promo, ej: "150" = precio promocional
 PRODUCT_STOCK="77"                     # stock total (suma de variantes)
-WHATSAPP_NUMBER="591700000000"
+WHATSAPP_NUMBER="59178037726"
 SELLER_NAME="Favio600RR"
 PRIMARY_COLOR="#ff6b35"
 SECONDARY_COLOR="#00d4ff"
