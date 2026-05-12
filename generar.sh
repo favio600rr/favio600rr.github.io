@@ -874,6 +874,7 @@ ${features_html}
             <h2 class="section-title">Galería</h2>
             <p class="section-desc">Cada detalle de nuestro parlante bluetooth TAXI</p>
             <div class="gallery-main">
+                <div class="gallery-blur" id="galleryBlur" style="background-image: url('assets/img/${first_img}')"></div>
                 <img id="galleryMain" src="assets/img/${first_img}" alt="${PRODUCT_NAME}">
             </div>
             <div class="gallery-thumbs" id="galleryThumbs">
@@ -1294,16 +1295,33 @@ button { font-family: inherit; cursor: pointer; }
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: var(--shadow);
-    background: linear-gradient(135deg, var(--bg3), var(--bg2));
+    background: var(--bg);
+    position: relative;
 }
 .gallery-main img {
     width: 100%;
-    height: 460px;
-    object-fit: cover;
+    height: auto;
+    max-height: 65vh;
+    object-fit: contain;
     transition: transform var(--ease-slow), opacity 0.3s ease;
     display: block;
+    position: relative;
+    z-index: 1;
 }
-.gallery-main:hover img { transform: scale(1.04); }
+.gallery-main:hover img { transform: scale(1.02); }
+
+.gallery-blur {
+    position: absolute;
+    inset: -60px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) brightness(0.4) saturate(1.2);
+    opacity: 0.7;
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    will-change: transform;
+}
 
 .gallery-thumbs {
     display: flex;
@@ -1312,7 +1330,8 @@ button { font-family: inherit; cursor: pointer; }
     flex-wrap: wrap;
 }
 .thumb {
-    width: 100px; height: 80px;
+    width: 90px;
+    aspect-ratio: 3/4;
     object-fit: cover;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -1331,6 +1350,8 @@ button { font-family: inherit; cursor: pointer; }
     border-color: var(--primary);
     box-shadow: 0 0 24px rgba(255, 107, 53, 0.25);
 }
+
+
 
 /* ============== VIDEO ============== */
 .video-section { background: var(--bg); }
@@ -1784,8 +1805,8 @@ button { font-family: inherit; cursor: pointer; }
 
     .section { padding: 70px 0; }
     .section-title { font-size: 1.8rem; }
-    .gallery-main img { height: 340px; }
-    .thumb { width: 80px; height: 64px; }
+    .gallery-main img { max-height: 50vh; }
+    .thumb { width: 70px; }
 
     .product-card { grid-template-columns: 1fr; gap: 32px; padding: 32px; }
     .product-price { font-size: 2.2rem; }
@@ -1808,9 +1829,9 @@ button { font-family: inherit; cursor: pointer; }
     .section { padding: 50px 0; }
     .section-title { font-size: 1.5rem; }
     .section-desc { font-size: 0.95rem; margin-bottom: 32px; }
-    .gallery-main img { height: 240px; }
+    .gallery-main img { max-height: 40vh; }
     .gallery-thumbs { gap: 8px; }
-    .thumb { width: 58px; height: 46px; }
+    .thumb { width: 54px; }
 
     .product-card { padding: 20px; }
     .product-name { font-size: 1.4rem; }
@@ -1939,6 +1960,8 @@ generate_js() {
         setTimeout(function () {
             mainImg.src = GALLERY_IMAGES[index];
             mainImg.style.opacity = "1";
+            var blurEl = document.getElementById("galleryBlur");
+            if (blurEl) blurEl.style.backgroundImage = "url('" + GALLERY_IMAGES[index] + "')";
         }, 280);
     }
 
@@ -2138,9 +2161,10 @@ generate_js() {
         }, CONFIG.featuredInterval);
     }
 
-    /* --- Keyboard navigation (arrow up/down between sections) --- */
+    /* --- Keyboard navigation --- */
     function initKeyboardNav() {
-        var locked = false;
+        var scrollLock = 0;
+        var scrollDelay = 700;
         var sections = [];
         var all = document.querySelectorAll("section[id]");
         for (var i = 0; i < all.length; i++) sections.push(all[i]);
@@ -2150,41 +2174,51 @@ generate_js() {
             return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable;
         }
 
+        function isGalleryVisible() {
+            var gal = document.getElementById("galeria");
+            if (!gal) return false;
+            var r = gal.getBoundingClientRect();
+            return r.top < window.innerHeight && r.bottom > 0;
+        }
+
         document.addEventListener("keydown", function (e) {
-            if (locked) return;
-            var key = e.key;
-            if (key !== "ArrowDown" && key !== "ArrowUp" && key !== "PageDown" && key !== "PageUp") return;
             if (shouldIgnore(e.target)) return;
+            var key = e.key;
+
+            if ((key === "ArrowLeft" || key === "ArrowRight") && isGalleryVisible()) {
+                e.preventDefault();
+                var mainImg = document.getElementById("galleryMain");
+                var thumbs  = document.querySelectorAll(".thumb");
+                if (!mainImg || !thumbs.length) return;
+                var target = key === "ArrowRight" ? currentIndex + 1 : currentIndex - 1;
+                if (target < 0 || target >= GALLERY_IMAGES.length) return;
+                changeImage(target, mainImg, thumbs);
+                return;
+            }
+
+            if (key !== "ArrowDown" && key !== "ArrowUp" && key !== "PageDown" && key !== "PageUp") return;
+            var now = Date.now();
+            if (now - scrollLock < scrollDelay) return;
+            scrollLock = now;
             e.preventDefault();
 
-            var closest = null;
-            var closestDist = Infinity;
-            var viewCenter = window.scrollY + window.innerHeight / 2;
+            var current = 0;
+            var bestVisible = 0;
+            var h = window.innerHeight;
 
             for (var i = 0; i < sections.length; i++) {
-                var rect = sections[i].getBoundingClientRect();
-                var secCenter = rect.top + rect.height / 2;
-                var dist = Math.abs(secCenter);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closest = i;
+                var r = sections[i].getBoundingClientRect();
+                var visible = Math.max(0, Math.min(h, r.bottom) - Math.max(0, r.top));
+                if (visible > bestVisible) {
+                    bestVisible = visible;
+                    current = i;
                 }
             }
 
-            if (closest === null) return;
-            var target = -1;
+            var target = key === "ArrowDown" || key === "PageDown" ? current + 1 : current - 1;
+            if (target < 0 || target >= sections.length) return;
 
-            if (key === "ArrowDown" || key === "PageDown") {
-                target = closest + 1;
-                if (target >= sections.length) return;
-            } else {
-                target = closest - 1;
-                if (target < 0) return;
-            }
-
-            locked = true;
             sections[target].scrollIntoView({ behavior: "smooth", block: "start" });
-            setTimeout(function () { locked = false; }, 800);
         });
     }
 

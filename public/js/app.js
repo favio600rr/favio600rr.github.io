@@ -12,11 +12,11 @@
         promoPrice:     "180",
         productStock:   82,
         featuredInterval: 5000,
-        whatsappNumber: "591700000000",
+        whatsappNumber: "59178037726",
         sellerName:     "Favio600RR"
     };
 
-    var GALLERY_IMAGES = ["assets/img/foto1.png","assets/img/foto2.png","assets/img/foto3.png","assets/img/foto4.png","assets/img/foto5.png","assets/img/foto6.png","assets/img/foto7.png","assets/img/foto8.png"];
+    var GALLERY_IMAGES = ["assets/img/foto1.png","assets/img/foto2.png","assets/img/foto3.png","assets/img/foto4.png","assets/img/foto5.png","assets/img/foto6.png","assets/img/foto7.png","assets/img/foto8.png","assets/img/foto9.png"];
     var VIDEOS         = [{ src: "assets/video/video1.mp4" }];
     var VARIANTS       = [{ id: "manillar", label: "Parlante para Manillar", qty: 0, max: 47 },{ id: "espejo", label: "Parlante para Espejo", qty: 0, max: 35 }];
 
@@ -74,6 +74,8 @@
         setTimeout(function () {
             mainImg.src = GALLERY_IMAGES[index];
             mainImg.style.opacity = "1";
+            var blurEl = document.getElementById("galleryBlur");
+            if (blurEl) blurEl.style.backgroundImage = "url('" + GALLERY_IMAGES[index] + "')";
         }, 280);
     }
 
@@ -273,9 +275,10 @@
         }, CONFIG.featuredInterval);
     }
 
-    /* --- Keyboard navigation (arrow up/down between sections) --- */
+    /* --- Keyboard navigation --- */
     function initKeyboardNav() {
-        var locked = false;
+        var scrollLock = 0;
+        var scrollDelay = 700;
         var sections = [];
         var all = document.querySelectorAll("section[id]");
         for (var i = 0; i < all.length; i++) sections.push(all[i]);
@@ -285,41 +288,51 @@
             return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable;
         }
 
+        function isGalleryVisible() {
+            var gal = document.getElementById("galeria");
+            if (!gal) return false;
+            var r = gal.getBoundingClientRect();
+            return r.top < window.innerHeight && r.bottom > 0;
+        }
+
         document.addEventListener("keydown", function (e) {
-            if (locked) return;
-            var key = e.key;
-            if (key !== "ArrowDown" && key !== "ArrowUp" && key !== "PageDown" && key !== "PageUp") return;
             if (shouldIgnore(e.target)) return;
+            var key = e.key;
+
+            if ((key === "ArrowLeft" || key === "ArrowRight") && isGalleryVisible()) {
+                e.preventDefault();
+                var mainImg = document.getElementById("galleryMain");
+                var thumbs  = document.querySelectorAll(".thumb");
+                if (!mainImg || !thumbs.length) return;
+                var target = key === "ArrowRight" ? currentIndex + 1 : currentIndex - 1;
+                if (target < 0 || target >= GALLERY_IMAGES.length) return;
+                changeImage(target, mainImg, thumbs);
+                return;
+            }
+
+            if (key !== "ArrowDown" && key !== "ArrowUp" && key !== "PageDown" && key !== "PageUp") return;
+            var now = Date.now();
+            if (now - scrollLock < scrollDelay) return;
+            scrollLock = now;
             e.preventDefault();
 
-            var closest = null;
-            var closestDist = Infinity;
-            var viewCenter = window.scrollY + window.innerHeight / 2;
+            var current = 0;
+            var bestVisible = 0;
+            var h = window.innerHeight;
 
             for (var i = 0; i < sections.length; i++) {
-                var rect = sections[i].getBoundingClientRect();
-                var secCenter = rect.top + rect.height / 2;
-                var dist = Math.abs(secCenter);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closest = i;
+                var r = sections[i].getBoundingClientRect();
+                var visible = Math.max(0, Math.min(h, r.bottom) - Math.max(0, r.top));
+                if (visible > bestVisible) {
+                    bestVisible = visible;
+                    current = i;
                 }
             }
 
-            if (closest === null) return;
-            var target = -1;
+            var target = key === "ArrowDown" || key === "PageDown" ? current + 1 : current - 1;
+            if (target < 0 || target >= sections.length) return;
 
-            if (key === "ArrowDown" || key === "PageDown") {
-                target = closest + 1;
-                if (target >= sections.length) return;
-            } else {
-                target = closest - 1;
-                if (target < 0) return;
-            }
-
-            locked = true;
             sections[target].scrollIntoView({ behavior: "smooth", block: "start" });
-            setTimeout(function () { locked = false; }, 800);
         });
     }
 

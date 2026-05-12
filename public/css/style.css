@@ -326,16 +326,33 @@ button { font-family: inherit; cursor: pointer; }
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: var(--shadow);
-    background: linear-gradient(135deg, var(--bg3), var(--bg2));
+    background: var(--bg);
+    position: relative;
 }
 .gallery-main img {
     width: 100%;
-    height: 460px;
-    object-fit: cover;
+    height: auto;
+    max-height: 65vh;
+    object-fit: contain;
     transition: transform var(--ease-slow), opacity 0.3s ease;
     display: block;
+    position: relative;
+    z-index: 1;
 }
-.gallery-main:hover img { transform: scale(1.04); }
+.gallery-main:hover img { transform: scale(1.02); }
+
+.gallery-blur {
+    position: absolute;
+    inset: -60px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) brightness(0.4) saturate(1.2);
+    opacity: 0.7;
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    will-change: transform;
+}
 
 .gallery-thumbs {
     display: flex;
@@ -344,7 +361,8 @@ button { font-family: inherit; cursor: pointer; }
     flex-wrap: wrap;
 }
 .thumb {
-    width: 100px; height: 80px;
+    width: 90px;
+    aspect-ratio: 3/4;
     object-fit: cover;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -363,6 +381,8 @@ button { font-family: inherit; cursor: pointer; }
     border-color: var(--primary);
     box-shadow: 0 0 24px rgba(255, 107, 53, 0.25);
 }
+
+
 
 /* ============== VIDEO ============== */
 .video-section { background: var(--bg); }
@@ -816,8 +836,8 @@ button { font-family: inherit; cursor: pointer; }
 
     .section { padding: 70px 0; }
     .section-title { font-size: 1.8rem; }
-    .gallery-main img { height: 340px; }
-    .thumb { width: 80px; height: 64px; }
+    .gallery-main img { max-height: 50vh; }
+    .thumb { width: 70px; }
 
     .product-card { grid-template-columns: 1fr; gap: 32px; padding: 32px; }
     .product-price { font-size: 2.2rem; }
@@ -840,9 +860,9 @@ button { font-family: inherit; cursor: pointer; }
     .section { padding: 50px 0; }
     .section-title { font-size: 1.5rem; }
     .section-desc { font-size: 0.95rem; margin-bottom: 32px; }
-    .gallery-main img { height: 240px; }
+    .gallery-main img { max-height: 40vh; }
     .gallery-thumbs { gap: 8px; }
-    .thumb { width: 58px; height: 46px; }
+    .thumb { width: 54px; }
 
     .product-card { padding: 20px; }
     .product-name { font-size: 1.4rem; }
