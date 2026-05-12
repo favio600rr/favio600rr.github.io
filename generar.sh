@@ -44,7 +44,7 @@ PRODUCT_VARIANTS=(
 # Imágenes destacadas del producto — nombre de archivo en assets/img/
 FEATURED_PRODUCT_1="foto4.png"
 FEATURED_PRODUCT_1_LABEL="Parlante para Manillar"
-FEATURED_PRODUCT_2="foto2.png"
+FEATURED_PRODUCT_2="foto9.png"
 FEATURED_PRODUCT_2_LABEL="Parlante para Espejo"
 FEATURED_ROTATION_INTERVAL="5000"
 
