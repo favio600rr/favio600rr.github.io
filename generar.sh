@@ -52,8 +52,8 @@ FEATURED_ROTATION_INTERVAL="5000"
 
 # Redes sociales — deja vacío para ocultar
 INSTAGRAM_URL=""
-TIKTOK_URL="https://www.tiktok.com/@favio600rr.yt"
-YOUTUBE_URL="https://www.youtube.com/@Favio600RR"
+TIKTOK_URL=""
+YOUTUBE_URL=""
 FACEBOOK_URL=""
 TWITTER_URL=""
 X_URL=""
