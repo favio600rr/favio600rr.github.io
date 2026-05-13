@@ -746,6 +746,54 @@ button { font-family: inherit; cursor: pointer; }
 }
 .btn-whatsapp:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
+/* --- Contacto secundario WhatsApp --- */
+.whatsapp-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 16px 24px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.07), rgba(37, 211, 102, 0.03));
+    border: 1px solid rgba(37, 211, 102, 0.18);
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all var(--ease);
+    text-decoration: none;
+}
+.whatsapp-secondary .ws-icon {
+    width: 22px;
+    height: 22px;
+    color: #25d366;
+    flex-shrink: 0;
+    transition: transform var(--ease);
+}
+.whatsapp-secondary .ws-text-light {
+    color: var(--text2);
+    font-weight: 400;
+    font-size: 0.95rem;
+}
+.whatsapp-secondary .ws-number {
+    color: #25d366;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+}
+.whatsapp-secondary.is-link {
+    cursor: pointer;
+}
+.whatsapp-secondary.is-link:hover {
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.14), rgba(37, 211, 102, 0.06));
+    border-color: rgba(37, 211, 102, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(37, 211, 102, 0.18);
+}
+.whatsapp-secondary.is-link:hover .ws-icon {
+    transform: scale(1.1);
+}
+
 /* ============== FOOTER ============== */
 .footer {
     background: var(--bg);
@@ -873,6 +921,9 @@ button { font-family: inherit; cursor: pointer; }
     .promo-badge { font-size: 0.7rem; padding: 4px 12px; }
     .qty-btn { width: 40px; height: 40px; }
     .qty-input { width: 54px; height: 40px; font-size: 1rem; }
+    .whatsapp-secondary { font-size: 0.9rem; padding: 14px 18px; gap: 10px; }
+    .whatsapp-secondary .ws-icon { width: 20px; height: 20px; }
+    .whatsapp-secondary .ws-number { font-size: 1.1rem; }
 
     .video-wrapper video { aspect-ratio: 16 / 9; }
 

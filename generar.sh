@@ -21,6 +21,8 @@ PRODUCT_PRICE="203.40"
 PROMO_PRICE="180"                      # vacío = sin promo, ej: "150" = precio promocional
 PRODUCT_STOCK="77"                     # stock total (suma de variantes)
 WHATSAPP_NUMBER="59178037726"
+SECONDARY_WHATSAPP_NUMBER="78037726"        # vacío = ocultar bloque alternativo
+ENABLE_SECONDARY_WHATSAPP_LINK="false"       # "true" = enlace wa.me, "false" = solo texto
 SELLER_NAME="Favio600RR"
 PRIMARY_COLOR="#ff6b35"
 SECONDARY_COLOR="#00d4ff"
@@ -801,6 +803,36 @@ PRICEEOF
 )
     fi
 
+    # ─── Contacto secundario WhatsApp ───
+    local secondary_whatsapp_html=""
+    if [ -n "$SECONDARY_WHATSAPP_NUMBER" ]; then
+        local secondary_display="$SECONDARY_WHATSAPP_NUMBER"
+        local secondary_wa_number="$SECONDARY_WHATSAPP_NUMBER"
+        if [[ "$secondary_wa_number" =~ ^[0-9]+$ ]] && [ ${#secondary_wa_number} -le 8 ]; then
+            secondary_wa_number="591${secondary_wa_number}"
+        fi
+
+        local sec_tag="div"
+        local sec_href=""
+        local sec_extra=""
+        if [ "$ENABLE_SECONDARY_WHATSAPP_LINK" = "true" ]; then
+            sec_tag="a"
+            sec_href=" href=\"https://wa.me/${secondary_wa_number}\""
+            sec_extra=" class=\"whatsapp-secondary is-link\" target=\"_blank\" rel=\"noopener noreferrer\""
+        else
+            sec_extra=" class=\"whatsapp-secondary\""
+        fi
+
+        secondary_whatsapp_html=$(cat <<SECHPRO
+                    <${sec_tag}${sec_href}${sec_extra}>
+                        <svg class="ws-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H3l2.5-4A8.5 8.5 0 1 1 21 11.5z"/></svg>
+                        <span class="ws-text-light">o comunícate al</span>
+                        <span class="ws-number">${secondary_display}</span>
+                    </${sec_tag}>
+SECHPRO
+        )
+    fi
+
     # ─── Escribir HTML ───
     cat <<EOF > "${OUTPUT_DIR}/index.html"
 <!DOCTYPE html>
@@ -933,6 +965,7 @@ ${variants_html}
                     <button id="whatsappBtn" class="btn btn-whatsapp" type="button">
                         <span>💬</span> Pedir por WhatsApp
                     </button>
+                    ${secondary_whatsapp_html}
                 </div>
             </div>
         </div>
@@ -1715,6 +1748,54 @@ button { font-family: inherit; cursor: pointer; }
 }
 .btn-whatsapp:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
+/* --- Contacto secundario WhatsApp --- */
+.whatsapp-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 16px 24px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.07), rgba(37, 211, 102, 0.03));
+    border: 1px solid rgba(37, 211, 102, 0.18);
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all var(--ease);
+    text-decoration: none;
+}
+.whatsapp-secondary .ws-icon {
+    width: 22px;
+    height: 22px;
+    color: #25d366;
+    flex-shrink: 0;
+    transition: transform var(--ease);
+}
+.whatsapp-secondary .ws-text-light {
+    color: var(--text2);
+    font-weight: 400;
+    font-size: 0.95rem;
+}
+.whatsapp-secondary .ws-number {
+    color: #25d366;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+}
+.whatsapp-secondary.is-link {
+    cursor: pointer;
+}
+.whatsapp-secondary.is-link:hover {
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.14), rgba(37, 211, 102, 0.06));
+    border-color: rgba(37, 211, 102, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(37, 211, 102, 0.18);
+}
+.whatsapp-secondary.is-link:hover .ws-icon {
+    transform: scale(1.1);
+}
+
 /* ============== FOOTER ============== */
 .footer {
     background: var(--bg);
@@ -1842,6 +1923,9 @@ button { font-family: inherit; cursor: pointer; }
     .promo-badge { font-size: 0.7rem; padding: 4px 12px; }
     .qty-btn { width: 40px; height: 40px; }
     .qty-input { width: 54px; height: 40px; font-size: 1rem; }
+    .whatsapp-secondary { font-size: 0.9rem; padding: 14px 18px; gap: 10px; }
+    .whatsapp-secondary .ws-icon { width: 20px; height: 20px; }
+    .whatsapp-secondary .ws-number { font-size: 1.1rem; }
 
     .video-wrapper video { aspect-ratio: 16 / 9; }
 
