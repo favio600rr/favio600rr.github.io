@@ -26,12 +26,14 @@
     document.addEventListener("DOMContentLoaded", function () {
         initImageFallback();
         initGallery();
+        initGallerySwipe();
         initVariants();
         initWhatsApp();
         initNav();
         initReveal();
         initVideos();
         initFeatured();
+        initFeaturedSwipe();
         initKeyboardNav();
         handleStock();
     });
@@ -77,6 +79,52 @@
             var blurEl = document.getElementById("galleryBlur");
             if (blurEl) blurEl.style.backgroundImage = "url('" + GALLERY_IMAGES[index] + "')";
         }, 280);
+    }
+
+    /* --- Swipe helper --- */
+    function initSwipe(el, onLeft, onRight) {
+        if (!el) return;
+        var startX = 0, startY = 0;
+        el.addEventListener("touchstart", function (e) {
+            var t = e.touches[0];
+            startX = t.clientX;
+            startY = t.clientY;
+        }, { passive: true });
+        el.addEventListener("touchend", function (e) {
+            if (!startX) return;
+            var t = e.changedTouches[0];
+            var dx = t.clientX - startX;
+            var dy = t.clientY - startY;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                if (dx > 0) onRight();
+                else onLeft();
+            }
+            startX = 0;
+            startY = 0;
+        }, { passive: true });
+    }
+
+    /* --- Gallery swipe --- */
+    function initGallerySwipe() {
+        var el = document.querySelector(".gallery-main");
+        var thumbs = document.querySelectorAll(".thumb");
+        if (!el || !thumbs.length) return;
+        initSwipe(el,
+            function () {
+                var mainImg = document.getElementById("galleryMain");
+                var target = currentIndex + 1;
+                if (target >= GALLERY_IMAGES.length) return;
+                if (!mainImg) return;
+                changeImage(target, mainImg, thumbs);
+            },
+            function () {
+                var mainImg = document.getElementById("galleryMain");
+                var target = currentIndex - 1;
+                if (target < 0) return;
+                if (!mainImg) return;
+                changeImage(target, mainImg, thumbs);
+            }
+        );
     }
 
     /* --- Variants (independent quantity selectors) --- */
@@ -250,16 +298,20 @@
             }
             return;
         }
-        var current = 0;
+
+        var state = { current: 0, slides: slides, dots: dots };
+        container._featState = state;
 
         function goTo(index) {
-            if (index === current) return;
-            slides[current].classList.remove("active");
-            if (dots.length) dots[current].classList.remove("active");
-            current = index;
-            slides[current].classList.add("active");
-            if (dots.length) dots[current].classList.add("active");
+            if (index === state.current) return;
+            slides[state.current].classList.remove("active");
+            if (dots.length) dots[state.current].classList.remove("active");
+            state.current = index;
+            slides[index].classList.add("active");
+            if (dots.length) dots[index].classList.add("active");
+            updateFeaturedBlur(index);
         }
+        state.goTo = goTo;
 
         if (dots.length) {
             for (var i = 0; i < dots.length; i++) {
@@ -270,9 +322,44 @@
         }
 
         setInterval(function () {
-            var next = (current + 1) % slides.length;
+            var next = (state.current + 1) % slides.length;
             goTo(next);
         }, CONFIG.featuredInterval);
+
+        updateFeaturedBlur(0);
+    }
+
+    function updateFeaturedBlur(index) {
+        var blurEl = document.getElementById("featuredBlur");
+        if (!blurEl) return;
+        var slides = document.querySelectorAll(".featured-slide");
+        var img = slides[index] && slides[index].querySelector("img");
+        if (img) {
+            blurEl.style.backgroundImage = "url('" + img.src + "')";
+            blurEl.style.opacity = "0.6";
+        }
+    }
+
+    /* --- Featured swipe --- */
+    function initFeaturedSwipe() {
+        var container = document.getElementById("productFeatured");
+        if (!container) return;
+        var slides = container.querySelectorAll(".featured-slide");
+        if (slides.length < 2) return;
+        initSwipe(container,
+            function () {
+                var state = container._featState;
+                if (!state) return;
+                var next = (state.current + 1) % slides.length;
+                state.goTo(next);
+            },
+            function () {
+                var state = container._featState;
+                if (!state) return;
+                var prev = (state.current - 1 + slides.length) % slides.length;
+                state.goTo(prev);
+            }
+        );
     }
 
     /* --- Keyboard navigation --- */

@@ -759,6 +759,7 @@ generate_index_html() {
     local featured_html=""
     if [ ${#featured_entries[@]} -gt 0 ]; then
         featured_html='                <div class="product-featured" id="productFeatured">'$'\n'
+        featured_html+='                    <div class="featured-blur" id="featuredBlur"></div>'$'\n'
         featured_html+='                    <div class="featured-slides">'$'\n'
         local fe_idx=0
         for fe_entry in "${featured_entries[@]}"; do
@@ -1330,6 +1331,7 @@ button { font-family: inherit; cursor: pointer; }
     box-shadow: var(--shadow);
     background: var(--bg);
     position: relative;
+    touch-action: pan-y;
 }
 .gallery-main img {
     width: 100%;
@@ -1586,6 +1588,18 @@ button { font-family: inherit; cursor: pointer; }
 }
 .featured-slide:hover img {
     transform: scale(1.03);
+}
+.featured-blur {
+    position: absolute;
+    inset: -40px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(24px) brightness(0.35) saturate(1.1);
+    opacity: 0.6;
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    will-change: transform;
 }
 .featured-label {
     position: absolute;
@@ -1996,12 +2010,14 @@ generate_js() {
     document.addEventListener("DOMContentLoaded", function () {
         initImageFallback();
         initGallery();
+        initGallerySwipe();
         initVariants();
         initWhatsApp();
         initNav();
         initReveal();
         initVideos();
         initFeatured();
+        initFeaturedSwipe();
         initKeyboardNav();
         handleStock();
     });
@@ -2047,6 +2063,52 @@ generate_js() {
             var blurEl = document.getElementById("galleryBlur");
             if (blurEl) blurEl.style.backgroundImage = "url('" + GALLERY_IMAGES[index] + "')";
         }, 280);
+    }
+
+    /* --- Swipe helper --- */
+    function initSwipe(el, onLeft, onRight) {
+        if (!el) return;
+        var startX = 0, startY = 0;
+        el.addEventListener("touchstart", function (e) {
+            var t = e.touches[0];
+            startX = t.clientX;
+            startY = t.clientY;
+        }, { passive: true });
+        el.addEventListener("touchend", function (e) {
+            if (!startX) return;
+            var t = e.changedTouches[0];
+            var dx = t.clientX - startX;
+            var dy = t.clientY - startY;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                if (dx > 0) onRight();
+                else onLeft();
+            }
+            startX = 0;
+            startY = 0;
+        }, { passive: true });
+    }
+
+    /* --- Gallery swipe --- */
+    function initGallerySwipe() {
+        var el = document.querySelector(".gallery-main");
+        var thumbs = document.querySelectorAll(".thumb");
+        if (!el || !thumbs.length) return;
+        initSwipe(el,
+            function () {
+                var mainImg = document.getElementById("galleryMain");
+                var target = currentIndex + 1;
+                if (target >= GALLERY_IMAGES.length) return;
+                if (!mainImg) return;
+                changeImage(target, mainImg, thumbs);
+            },
+            function () {
+                var mainImg = document.getElementById("galleryMain");
+                var target = currentIndex - 1;
+                if (target < 0) return;
+                if (!mainImg) return;
+                changeImage(target, mainImg, thumbs);
+            }
+        );
     }
 
     /* --- Variants (independent quantity selectors) --- */
@@ -2220,16 +2282,20 @@ generate_js() {
             }
             return;
         }
-        var current = 0;
+
+        var state = { current: 0, slides: slides, dots: dots };
+        container._featState = state;
 
         function goTo(index) {
-            if (index === current) return;
-            slides[current].classList.remove("active");
-            if (dots.length) dots[current].classList.remove("active");
-            current = index;
-            slides[current].classList.add("active");
-            if (dots.length) dots[current].classList.add("active");
+            if (index === state.current) return;
+            slides[state.current].classList.remove("active");
+            if (dots.length) dots[state.current].classList.remove("active");
+            state.current = index;
+            slides[index].classList.add("active");
+            if (dots.length) dots[index].classList.add("active");
+            updateFeaturedBlur(index);
         }
+        state.goTo = goTo;
 
         if (dots.length) {
             for (var i = 0; i < dots.length; i++) {
@@ -2240,9 +2306,44 @@ generate_js() {
         }
 
         setInterval(function () {
-            var next = (current + 1) % slides.length;
+            var next = (state.current + 1) % slides.length;
             goTo(next);
         }, CONFIG.featuredInterval);
+
+        updateFeaturedBlur(0);
+    }
+
+    function updateFeaturedBlur(index) {
+        var blurEl = document.getElementById("featuredBlur");
+        if (!blurEl) return;
+        var slides = document.querySelectorAll(".featured-slide");
+        var img = slides[index] && slides[index].querySelector("img");
+        if (img) {
+            blurEl.style.backgroundImage = "url('" + img.src + "')";
+            blurEl.style.opacity = "0.6";
+        }
+    }
+
+    /* --- Featured swipe --- */
+    function initFeaturedSwipe() {
+        var container = document.getElementById("productFeatured");
+        if (!container) return;
+        var slides = container.querySelectorAll(".featured-slide");
+        if (slides.length < 2) return;
+        initSwipe(container,
+            function () {
+                var state = container._featState;
+                if (!state) return;
+                var next = (state.current + 1) % slides.length;
+                state.goTo(next);
+            },
+            function () {
+                var state = container._featState;
+                if (!state) return;
+                var prev = (state.current - 1 + slides.length) % slides.length;
+                state.goTo(prev);
+            }
+        );
     }
 
     /* --- Keyboard navigation --- */
