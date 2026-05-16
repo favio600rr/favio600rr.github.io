@@ -35,8 +35,8 @@ HERO_FEATURES=(
 )
 
 # Stock individual por variante
-STOCK_MANILLAR="47"
-STOCK_ESPEJO="35"
+STOCK_MANILLAR="31"
+STOCK_ESPEJO="19"
 
 PRODUCT_VARIANTS=(
     "Parlante para Manillar|manillar"

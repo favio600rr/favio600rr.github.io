@@ -10,7 +10,7 @@
         productName:    "Parlante Bluetooth TAXI",
         productPrice:   "203.40",
         promoPrice:     "180",
-        productStock:   82,
+        productStock:   50,
         featuredInterval: 5000,
         whatsappNumber: "59178037726",
         sellerName:     "Favio600RR"
@@ -18,7 +18,7 @@
 
     var GALLERY_IMAGES = ["assets/img/foto1.png","assets/img/foto2.png","assets/img/foto3.png","assets/img/foto4.png","assets/img/foto5.png","assets/img/foto6.png","assets/img/foto7.png","assets/img/foto8.png","assets/img/foto9.png"];
     var VIDEOS         = [{ src: "assets/video/video1.mp4" }];
-    var VARIANTS       = [{ id: "manillar", label: "Parlante para Manillar", qty: 0, max: 47 },{ id: "espejo", label: "Parlante para Espejo", qty: 0, max: 35 }];
+    var VARIANTS       = [{ id: "manillar", label: "Parlante para Manillar", qty: 0, max: 31 },{ id: "espejo", label: "Parlante para Espejo", qty: 0, max: 19 }];
 
     var currentIndex = 0;
 
